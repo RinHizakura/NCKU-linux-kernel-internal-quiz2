@@ -81,6 +81,8 @@ xs *xs_trim(xs *x, const char *trimset)
     if (!trimset[0])
         return x;
 
+    xs_cow(x);
+
     char *dataptr = xs_data(x), *orig = dataptr;
 
     /* similar to strspn/strpbrk but it operates on binary data */
@@ -156,9 +158,13 @@ void test_cpy()
 
     printf("===== Test2 =====\n");
     xs prefix = *xs_tmp("((("), suffix = *xs_tmp(")))");
-    xs_concat(&s1, &prefix, &suffix);
-    printf("After concat to s1, s2: %s %ld\n", xs_data(&s1),
+    xs_concat(&s2, &prefix, &suffix);
+    printf("After concat to s2, s1: %s %ld\n", xs_data(&s1),
            XS_GET_REFCNT((&s1)));
+
+    printf("===== Test3 =====\n");
+    xs_trim(&s2, "()!");
+    printf("After trim s2, s2: %s %ld\n", xs_data(&s2), XS_GET_REFCNT((&s2)));
 }
 
 int main()
