@@ -144,6 +144,69 @@ xs *xs_cpy(xs *dest, xs *src)
     return dest;
 }
 
+char *xs_tok(xs *x, const char *delim)
+{
+    if (!delim[0])
+        return xs_data(x);
+
+    static char *save_ptr;
+    char *end;
+    char *s;
+
+    if (x == NULL)
+        s = save_ptr;
+    else {
+        xs_cow(x);
+        s = xs_data(x);
+    }
+
+    if (*s == '\0') {
+        save_ptr = s;
+        return NULL;
+    }
+
+    uint8_t mask[32] = {0};
+
+#define check_bit(byte) (mask[(uint8_t) byte / 8] & 1 << (uint8_t) byte % 8)
+#define set_bit(byte) (mask[(uint8_t) byte / 8] |= 1 << (uint8_t) byte % 8)
+
+    size_t i, slen = strlen(s), delimlen = strlen(delim);
+
+    for (i = 0; i < delimlen; i++)
+        set_bit(delim[i]);
+    /* Scan leading delimiters.  */
+    for (i = 0; i < slen; i++)
+        if (check_bit(s[i]))
+            break;
+
+    if (*s == '\0') {
+        save_ptr = s;
+        return NULL;
+    }
+
+    end = s + i;
+    if (*end == '\0') {
+        save_ptr = end;
+        return s;
+    }
+
+    /* Terminate the token and make *SAVE_PTR point past it.  */
+    *end = '\0';
+    save_ptr = end + 1;
+
+    // Revise structure member of x if it is not NULL
+    if (x != NULL) {
+        if (xs_is_ptr(x))
+            x->size = i;
+        else
+            x->space_left = 15 - i;
+    }
+    return s;
+
+#undef check_bit
+#undef set_bit
+}
+
 void test_cpy()
 {
     printf("===== Test1 =====\n");
@@ -167,9 +230,27 @@ void test_cpy()
     printf("After trim s2, s2: %s %ld\n", xs_data(&s2), XS_GET_REFCNT((&s2)));
 }
 
+void test_tok()
+{
+    xs string;
+    const char s[2] = "-";
+    char *token;
+    xs_new(&string, "This is - www.gitbook.net - website");
+
+    /* get the first token */
+    token = xs_tok(&string, s);
+
+    /* walk through other tokens */
+    while (token != NULL) {
+        printf("token: %s\n", token);
+        token = xs_tok(NULL, s);
+    }
+}
+
 int main()
 {
     test_cpy();
+    test_tok();
 
     return 0;
 }

@@ -98,3 +98,4 @@ xs *xs_grow(xs *x, size_t len);
 xs *xs_concat(xs *string, const xs *prefix, const xs *suffix);
 xs *xs_trim(xs *x, const char *trimset);
 xs *xs_cpy(xs *dest, xs *src);
+char *xs_tok(xs *x, const char *delim);
