@@ -72,6 +72,12 @@ static inline int ilog2(uint32_t n)
      }){1}),                                               \
      xs_new(&xs_literal_empty(), "" x))
 
+// Utility macro for refcnt
+#define XS_INIT_REFCNT(x) *(size_t *) (x->ptr - OFFSET) = 1
+#define XS_INCR_REFCNT(x) ++*(size_t *) (x->ptr - OFFSET)
+#define XS_DECR_REFCNT(x) --*(size_t *) (x->ptr - OFFSET)
+#define XS_GET_REFCNT(x) xs_is_ptr(x) ? *(size_t *) (x->ptr - OFFSET) : 1
+
 static inline xs *xs_newempty(xs *x)
 {
     *x = xs_literal_empty();
@@ -80,17 +86,17 @@ static inline xs *xs_newempty(xs *x)
 
 static inline xs *xs_free(xs *x)
 {
-    if (xs_is_ptr(x)) {
-        free(xs_data(x) - OFFSET);
+    int ref = XS_GET_REFCNT(x);
+    if (ref > 1){
+    	XS_DECR_REFCNT(x);
     }
+    else if (xs_is_ptr(x)) {
+	free(xs_data(x) - OFFSET);
+    }
+
     return xs_newempty(x);
 }
 
-// Utility macro for refcnt
-#define XS_INIT_REFCNT(x) *(size_t *) (x->ptr - OFFSET) = 1
-#define XS_INCR_REFCNT(x) ++*(size_t *) (x->ptr - OFFSET)
-#define XS_DECR_REFCNT(x) --*(size_t *) (x->ptr - OFFSET)
-#define XS_GET_REFCNT(x) xs_is_ptr(x) ? *(size_t *) (x->ptr - OFFSET) : 1
 
 xs *xs_new(xs *x, const void *p);
 void xs_cow(xs *x);

@@ -40,7 +40,8 @@ xs *xs_grow(xs *x, size_t len)
 
 void xs_cow(xs *x)
 {
-    if (XS_GET_REFCNT(x) > 1) {
+    size_t ref = XS_GET_REFCNT(x);
+    if (ref > 1) {
         XS_DECR_REFCNT(x);
         xs_new(x, xs_data(x));
     }
@@ -125,7 +126,8 @@ xs *xs_trim(xs *x, const char *trimset)
 xs *xs_cpy(xs *dest, xs *src)
 {
     // If dest was referenced to others, decrease the reference count first
-    if (XS_GET_REFCNT(dest) > 1)
+    size_t ref = XS_GET_REFCNT(dest);
+    if (ref > 1)
         XS_DECR_REFCNT(dest);
 
     // If src is long string, just make a copy
@@ -210,15 +212,16 @@ char *xs_tok(xs *x, const char *delim)
 void test_cpy()
 {
     printf("===== Test1 =====\n");
-    xs src1;
-    xs s1, s2;
+    xs src1, s1, s2;
+    xs_newempty(&src1);xs_newempty(&s1);xs_newempty(&s2);
+    
     xs_new(&src1, "Happy Lucky Smile Yeah!!!!!!");
     xs_cpy(&s1, &src1);
     printf("Befor cpy to s2, s1: %s %ld\n", xs_data(&s1), XS_GET_REFCNT((&s1)));
     xs_cpy(&s2, &src1);
     printf("After cpy to s2, s1: %s %ld\n", xs_data(&s1), XS_GET_REFCNT((&s1)));
     printf("Now s2: %s %ld\n", xs_data(&s2), XS_GET_REFCNT((&s2)));
-
+    
     printf("===== Test2 =====\n");
     xs prefix = *xs_tmp("((("), suffix = *xs_tmp(")))");
     xs_concat(&s2, &prefix, &suffix);
@@ -228,11 +231,19 @@ void test_cpy()
     printf("===== Test3 =====\n");
     xs_trim(&s2, "()!");
     printf("After trim s2, s2: %s %ld\n", xs_data(&s2), XS_GET_REFCNT((&s2)));
+    
+    
+    // After test, free it
+    xs_free(&src1);
+    xs_free(&s2);
+    xs_free(&s1);
 }
 
 void test_tok()
 {
     xs string;
+    xs_newempty(&string);
+
     const char s[2] = "-";
     char *token;
     xs_new(&string, "This is - www.gitbook.net - website");
@@ -245,6 +256,7 @@ void test_tok()
         printf("token: %s\n", token);
         token = xs_tok(NULL, s);
     }
+    xs_free(&string);
 }
 
 int main()
