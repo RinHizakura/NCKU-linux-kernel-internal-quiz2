@@ -1,4 +1,7 @@
 #include "xs.h"
+#include <time.h>
+
+#define COPYS 300000
 
 #ifdef NOCOW
 #define COW_MODE 0
@@ -271,10 +274,35 @@ void test_tok()
     xs_free(&string);
 }
 
+void test_perf()
+{
+    xs src;
+    xs_new(&src,
+           "This is a long long long long long long long long long \
+			long long long long long long long long string");
+
+    xs str[COPYS];
+    // init the xstring array first
+    for (int i = 0; i < COPYS; i++)
+        xs_newempty(&str[i]);
+
+    clock_t start, end;
+    start = clock();
+    for (int i = 0; i < COPYS; i++)
+        xs_cpy(&str[i], &src);
+    end = clock();
+
+    double time = ((double) (end - start)) / CLOCKS_PER_SEC;
+    if (COW_MODE)
+        printf("Mode COW, using time %lf\n", time);
+    else
+        printf("Mode NO COW, using time %lf\n", time);
+}
 int main()
 {
-    test_cpy();
-    test_tok();
+    // test_cpy();
+    // test_tok();
+    test_perf();
 
     return 0;
 }
