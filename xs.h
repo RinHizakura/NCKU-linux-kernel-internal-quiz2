@@ -87,11 +87,10 @@ static inline xs *xs_newempty(xs *x)
 static inline xs *xs_free(xs *x)
 {
     int ref = XS_GET_REFCNT(x);
-    if (ref > 1){
-    	XS_DECR_REFCNT(x);
-    }
-    else if (xs_is_ptr(x)) {
-	free(xs_data(x) - OFFSET);
+    if (ref > 1) {
+        XS_DECR_REFCNT(x);
+    } else if (xs_is_ptr(x)) {
+        free(xs_data(x) - OFFSET);
     }
 
     return xs_newempty(x);

@@ -1,5 +1,11 @@
 #include "xs.h"
 
+#ifdef NOCOW
+#define COW_MODE 0
+#else
+#define COW_MODE 1
+#endif
+
 xs *xs_new(xs *x, const void *p)
 {
     *x = xs_literal_empty();
@@ -131,7 +137,7 @@ xs *xs_cpy(xs *dest, xs *src)
         XS_DECR_REFCNT(dest);
 
     // If src is long string, just make a copy
-    if (xs_is_ptr(src)) {
+    if (COW_MODE && xs_is_ptr(src)) {
         dest->is_ptr = true;
         XS_INCR_REFCNT(src);
         *dest = *src;
@@ -140,8 +146,12 @@ xs *xs_cpy(xs *dest, xs *src)
     else {
         dest->is_ptr = false;  // set dest's flag to short string
         size_t len = xs_size(src);
+        xs_grow(dest, len);
         memcpy(xs_data(dest), xs_data(src), len);
-        dest->space_left = 15 - len;
+        if (!xs_is_ptr(dest))
+            dest->space_left = 15 - len;
+        else
+            dest->size = len;
     }
     return dest;
 }
@@ -213,15 +223,17 @@ void test_cpy()
 {
     printf("===== Test1 =====\n");
     xs src1, s1, s2;
-    xs_newempty(&src1);xs_newempty(&s1);xs_newempty(&s2);
-    
+    xs_newempty(&src1);
+    xs_newempty(&s1);
+    xs_newempty(&s2);
+
     xs_new(&src1, "Happy Lucky Smile Yeah!!!!!!");
     xs_cpy(&s1, &src1);
     printf("Befor cpy to s2, s1: %s %ld\n", xs_data(&s1), XS_GET_REFCNT((&s1)));
     xs_cpy(&s2, &src1);
     printf("After cpy to s2, s1: %s %ld\n", xs_data(&s1), XS_GET_REFCNT((&s1)));
     printf("Now s2: %s %ld\n", xs_data(&s2), XS_GET_REFCNT((&s2)));
-    
+
     printf("===== Test2 =====\n");
     xs prefix = *xs_tmp("((("), suffix = *xs_tmp(")))");
     xs_concat(&s2, &prefix, &suffix);
@@ -231,8 +243,8 @@ void test_cpy()
     printf("===== Test3 =====\n");
     xs_trim(&s2, "()!");
     printf("After trim s2, s2: %s %ld\n", xs_data(&s2), XS_GET_REFCNT((&s2)));
-    
-    
+
+
     // After test, free it
     xs_free(&src1);
     xs_free(&s2);
