@@ -13,7 +13,7 @@ valgrind:
 
 perf:
 	gcc $(COPS) -o xs -g -std=gnu11 xs.c
-	sudo perf stat --repeat 1 -e cache-misses,cache-references ./xs
+	sudo perf stat -e cache-misses,cache-references ./xs
 
 xs.o: xs.c
 	gcc $(COPS) -o xs -g -std=gnu11 xs.c
